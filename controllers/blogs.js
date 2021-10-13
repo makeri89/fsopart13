@@ -19,7 +19,19 @@ router.delete('/:id', async (req, res) => {
       id: blogId
     }
   })
-  res.status(204)
+  res.status(204).end()
+})
+
+router.put('/:id', async (req, res) => {
+  const blogId = req.params.id
+  const blog = await Blog.findByPk(blogId)
+  if (blog) {
+    blog.likes = blog.likes + 1
+    await blog.save()
+    res.json(blog)
+  } else {
+    res.status(404).end()
+  }
 })
 
 module.exports = router
