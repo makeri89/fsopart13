@@ -42,6 +42,7 @@ Blog.init({
 const main = async () => {
   try {
     const blogs = await Blog.findAll()
+    console.log(JSON.stringify(blogs, null, 2))
     blogs.forEach((blog) => {
       const data = blog.dataValues
       console.log(`${data.author}: '${data.title}', ${data.likes} likes`)
