@@ -19,6 +19,11 @@ const errorHandler = (error, req, res, next) => {
   } else if (error.name === 'SequelizeValidationError') {
     if (error.message === 'Validation error: Validation isEmail on username failed') {
       return res.status(400).json({ error: 'Username must be a valid email address' })
+    } else if (error.message === 'Validation error: Validation min on year failed' ||
+              error.message === 'Validation error: Validation max on year failed') {
+      res.status(400).json({
+        error: 'The year attribute must be somewhere between 1991 and the current year'
+      })
     }
     return res.status(400).json({ error: error.message })
   }
@@ -30,7 +35,6 @@ const tokenExtractor = (req, res, next) => {
   const authorization = req.get('authorization')
   if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
     try {
-      console.log(authorization.substring(7))
       req.decodedToken = jwt.verify(authorization.substring(7), SECRET)
     } catch (e) {
       console.log(e)
