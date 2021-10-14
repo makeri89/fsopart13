@@ -1,25 +1,59 @@
 const router = require('express').Router()
+const { Op } = require('sequelize')
+const { Blog, User } = require('../models')
+const { tokenExtractor } = require('../util/middleware')
 
-const { Blog } = require('../models')
+router.get('/', async (req, res) => {
+  let where = {}
 
-router.get('/', async (_req, res) => {
-  const blogs = await Blog.findAll()
+  if (req.query.search) {
+    where = {
+      [Op.or]: [
+        {
+          title: {
+            [Op.substring]: req.query.search
+          }
+        },
+        {
+          author: {
+            [Op.substring]: req.query.search
+          }
+        }
+      ]
+    }
+  }
+
+  const blogs = await Blog.findAll({
+    include: {
+      model: User,
+      attributes: ['name', 'username']
+    },
+    where
+  })
+
   res.json(blogs)
 })
 
-router.post('/', async (req, res) => {
-  const blog = await Blog.create(req.body)
+router.post('/', tokenExtractor, async (req, res) => {
+  const user = await User.findByPk(req.decodedToken.id)
+  const blog = await Blog.create({ ...req.body, userId: user.id })
   res.json(blog)
 })
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', tokenExtractor, async (req, res) => {
+  const currentUser = await User.findByPk(req.decodedToken.id)
   const blogId = req.params.id
-  await Blog.destroy({
+  const blog = await Blog.findOne({
     where: {
       id: blogId
     }
   })
-  res.status(204).end()
+  if (blog.userId === currentUser.id) {
+    await blog.destroy()
+    res.status(204).end()
+  } else {
+    res.status(401).json({ error: 'You are not the owner of this blog' })
+  }
 })
 
 router.put('/:id', async (req, res) => {
