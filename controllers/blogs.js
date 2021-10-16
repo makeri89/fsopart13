@@ -11,12 +11,12 @@ router.get('/', async (req, res) => {
       [Op.or]: [
         {
           title: {
-            [Op.like]: '%' + req.query.search + '%'
+            [Op.iLike]: '%' + req.query.search + '%'
           }
         },
         {
           author: {
-            [Op.like]: '%' + req.query.search + '%'
+            [Op.iLike]: '%' + req.query.search + '%'
           }
         }
       ]
