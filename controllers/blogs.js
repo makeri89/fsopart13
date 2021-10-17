@@ -1,6 +1,6 @@
 const router = require('express').Router()
 const { Op } = require('sequelize')
-const { Blog, User } = require('../models')
+const { Blog, User, Session } = require('../models')
 const { tokenExtractor } = require('../util/middleware')
 
 router.get('/', async (req, res) => {
@@ -39,19 +39,32 @@ router.get('/', async (req, res) => {
 
 router.post('/', tokenExtractor, async (req, res) => {
   const user = await User.findByPk(req.decodedToken.id)
-  const blog = await Blog.create({ ...req.body, userId: user.id })
-  res.json(blog)
+  const sid = await Session.findByPk(req.cookies.sid)
+  if (!sid || user.disabled || sid.expires < new Date()) {
+    res.status(401).json({
+      error: 'authentication failed'
+    })
+  } else {
+    const blog = await Blog.create({ ...req.body, userId: user.id })
+    res.json(blog)
+  }
+  
 })
 
 router.delete('/:id', tokenExtractor, async (req, res) => {
   const currentUser = await User.findByPk(req.decodedToken.id)
+  const sid = await Session.findByPk(req.cookies.sid)
   const blogId = req.params.id
   const blog = await Blog.findOne({
     where: {
       id: blogId
     }
   })
-  if (blog.userId === currentUser.id) {
+  if (!sid || currentUser.disabled || sid.expires < new Date()) {
+    res.status(401).json({
+      error: 'authentication failed'
+    })
+  } else if (blog.userId === currentUser.id) {
     await blog.destroy()
     res.status(204).end()
   } else {
